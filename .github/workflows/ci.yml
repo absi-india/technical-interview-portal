@@ -24,8 +24,6 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
-        env:
-          DATABASE_URL: file:./dev.db
 
       - name: Lint
         run: npm run lint
@@ -51,8 +49,6 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
-        env:
-          DATABASE_URL: file:./dev.db
 
       - name: Build Next.js app
         run: npm run build
