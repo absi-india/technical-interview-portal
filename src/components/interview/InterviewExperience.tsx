@@ -48,8 +48,8 @@ export function InterviewExperience({ inviteToken, candidateName, jobTitle, leve
   const [codeResponse, setCodeResponse] = useState("");
   const [uploading, setUploading] = useState(false);
   const [showFullscreenOverlay, setShowFullscreenOverlay] = useState(false);
-  const [fullscreenExits, setFullscreenExits] = useState(0);
-  const [tabSwitches, setTabSwitches] = useState(0);
+  const [_fullscreenExits, setFullscreenExits] = useState(0);
+  const [_tabSwitches, setTabSwitches] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
