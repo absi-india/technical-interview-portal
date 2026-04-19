@@ -45,6 +45,3 @@ next-env.d.ts
 
 # local sqlite db
 dev.db
-
-# scripts helper
-/scripts/
