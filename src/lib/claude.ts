@@ -1,24 +1,17 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import pRetry from "p-retry";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
-export async function callClaude(
-  system: string,
-  user: string,
-  maxTokens = 4096
-): Promise<string> {
+async function callGemini(system: string, user: string): Promise<string> {
   return pRetry(
     async () => {
-      const msg = await client.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: maxTokens,
-        system,
-        messages: [{ role: "user", content: user }],
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: system,
       });
-      const block = msg.content[0];
-      if (block.type !== "text") throw new Error("Non-text response from Claude");
-      return block.text;
+      const result = await model.generateContent(user);
+      return result.response.text();
     },
     { retries: 3, minTimeout: 1000, factor: 2 }
   );
@@ -60,7 +53,7 @@ Rules:
 Job Title: ${jobTitle}
 Job Description: ${jobDescription}`;
 
-  const raw = await callClaude(system, user);
+  const raw = await callGemini(system, user);
   const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
   return JSON.parse(cleaned) as GeneratedQuestion[];
 }
@@ -90,7 +83,7 @@ Candidate's Spoken Transcript: ${transcript ?? "No transcript provided"}
 Candidate's Code/Written Response: ${codeResponse ?? "N/A"}
 Interview Level: ${level}`;
 
-  const raw = await callClaude(system, user, 512);
+  const raw = await callGemini(system, user);
   const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
   return JSON.parse(cleaned) as RatingResult;
 }
