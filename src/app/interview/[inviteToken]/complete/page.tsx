@@ -1,10 +1,20 @@
-export default async function CompletePage({
+"use client";
+
+import { useEffect } from "react";
+import { use } from "react";
+
+export default function CompletePage({
   params,
 }: {
   params: Promise<{ inviteToken: string }>;
 }) {
-  const { inviteToken } = await params;
-  void inviteToken;
+  const { inviteToken } = use(params);
+
+  useEffect(() => {
+    fetch(`/api/interview/${inviteToken}/rate`, { method: "POST" }).catch(() => {
+      // best-effort — cron will catch it if this fails
+    });
+  }, [inviteToken]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
