@@ -1,34 +1,8 @@
-name: Deploy to Vercel
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+# Deployment is handled by Vercel's native GitHub integration.
+# Connect your repo at https://vercel.com/new — Vercel auto-deploys
+# on every push to main and creates preview deploys for PRs.
+# No secrets or tokens needed here.
+#
+# This file intentionally has no jobs.
+name: Deploy (via Vercel GitHub Integration)
+on: {}

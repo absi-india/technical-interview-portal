@@ -16,7 +16,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -56,3 +56,5 @@ jobs:
           DATABASE_URL: file:./dev.db
           NEXTAUTH_SECRET: ci-build-secret-not-used-in-production
           NEXTAUTH_URL: http://localhost:3000
+          GEMINI_API_KEY: ci-placeholder
+          CRON_SECRET: ci-placeholder

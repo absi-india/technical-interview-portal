@@ -48,8 +48,8 @@ export function InterviewExperience({ inviteToken, candidateName, jobTitle, leve
   const [codeResponse, setCodeResponse] = useState("");
   const [uploading, setUploading] = useState(false);
   const [showFullscreenOverlay, setShowFullscreenOverlay] = useState(false);
-  const [_fullscreenExits, setFullscreenExits] = useState(0);
-  const [_tabSwitches, setTabSwitches] = useState(0);
+  const fullscreenExits = useRef(0);
+  const tabSwitches = useRef(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -200,12 +200,9 @@ export function InterviewExperience({ inviteToken, candidateName, jobTitle, leve
     const handleFsChange = () => {
       if (!document.fullscreenElement) {
         setShowFullscreenOverlay(true);
-        setFullscreenExits((c) => {
-          const newCount = c + 1;
-          logFraud("FULLSCREEN_EXIT", "HIGH", `Exit #${newCount}`);
-          if (newCount >= 3) handleAutoSubmit();
-          return newCount;
-        });
+        fullscreenExits.current += 1;
+        logFraud("FULLSCREEN_EXIT", "HIGH", `Exit #${fullscreenExits.current}`);
+        if (fullscreenExits.current >= 3) handleAutoSubmit();
       } else {
         setShowFullscreenOverlay(false);
       }
@@ -220,12 +217,9 @@ export function InterviewExperience({ inviteToken, candidateName, jobTitle, leve
     if (phase !== "interview") return;
     const handleVisibility = () => {
       if (document.hidden) {
-        setTabSwitches((c) => {
-          const newCount = c + 1;
-          logFraud("TAB_SWITCH", "MEDIUM", `Switch #${newCount}`);
-          if (newCount >= 5) handleAutoSubmit();
-          return newCount;
-        });
+        tabSwitches.current += 1;
+        logFraud("TAB_SWITCH", "MEDIUM", `Switch #${tabSwitches.current}`);
+        if (tabSwitches.current >= 5) handleAutoSubmit();
       }
     };
     const handleBlur = () => {
