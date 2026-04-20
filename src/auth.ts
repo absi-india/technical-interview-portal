@@ -69,13 +69,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.isActive || !user.passwordHash) return null;
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.isActive || !user.passwordHash) return null;
 
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+          const valid = await bcrypt.compare(password, user.passwordHash);
+          if (!valid) return null;
 
-        return { id: user.id, email: user.email, name: user.name, role: user.role };
+          return { id: user.id, email: user.email, name: user.name, role: user.role };
+        } catch {
+          return null;
+        }
       },
     }),
   ],

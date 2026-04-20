@@ -10,32 +10,37 @@ export async function POST(
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await params;
-  const test = await prisma.test.findUnique({ where: { id } });
+  try {
+    const { id } = await params;
+    const test = await prisma.test.findUnique({ where: { id } });
 
-  if (!test) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (session.user.role !== "ADMIN" && test.recruiterId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!test) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (session.user.role !== "ADMIN" && test.recruiterId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (test.status !== "QUESTIONS_PENDING") {
+      return NextResponse.json({ error: "Cannot regenerate after approval" }, { status: 400 });
+    }
+
+    const result = await generateQuestions(test.level, test.jobTitle, test.jobDescription);
+
+    // Delete old questions and create new ones
+    await prisma.question.deleteMany({ where: { testId: id } });
+    await prisma.question.createMany({
+      data: result.questions.map((q) => ({
+        testId: id,
+        order: q.id,
+        questionText: q.questionText,
+        category: q.category,
+        expectedSummary: q.expectedAnswerSummary,
+        maxScore: q.maxScore,
+        codeLanguageHint: q.codeLanguageHint ?? null,
+      })),
+    });
+
+    return NextResponse.json({ ok: true, debug: result.debug });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to regenerate questions";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-  if (test.status !== "QUESTIONS_PENDING") {
-    return NextResponse.json({ error: "Cannot regenerate after approval" }, { status: 400 });
-  }
-
-  const generated = await generateQuestions(test.level, test.jobTitle, test.jobDescription);
-
-  // Delete old questions and create new ones
-  await prisma.question.deleteMany({ where: { testId: id } });
-  await prisma.question.createMany({
-    data: generated.map((q) => ({
-      testId: id,
-      order: q.id,
-      questionText: q.questionText,
-      category: q.category,
-      expectedSummary: q.expectedAnswerSummary,
-      maxScore: q.maxScore,
-      codeLanguageHint: q.codeLanguageHint ?? null,
-    })),
-  });
-
-  return NextResponse.json({ ok: true });
 }

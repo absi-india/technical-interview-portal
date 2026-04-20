@@ -7,46 +7,51 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
-  const { candidateId, jobTitle, jobDescription, level } = body;
+  try {
+    const body = await req.json();
+    const { candidateId, jobTitle, jobDescription, level } = body;
 
-  if (!candidateId || !jobTitle || !jobDescription || !level) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-  }
+    if (!candidateId || !jobTitle || !jobDescription || !level) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
 
-  const validLevels = ["BASIC", "INTERMEDIATE", "ADVANCED", "PRACTICAL"];
-  if (!validLevels.includes(level)) {
-    return NextResponse.json({ error: "Invalid level" }, { status: 400 });
-  }
+    const validLevels = ["BASIC", "INTERMEDIATE", "ADVANCED", "PRACTICAL"];
+    if (!validLevels.includes(level)) {
+      return NextResponse.json({ error: "Invalid level" }, { status: 400 });
+    }
 
-  const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
-  if (!candidate) return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
-  if (session.user.role !== "ADMIN" && candidate.recruiterId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
+    if (!candidate) return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
+    if (session.user.role !== "ADMIN" && candidate.recruiterId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  const generated = await generateQuestions(level, jobTitle, jobDescription);
+    const result = await generateQuestions(level, jobTitle, jobDescription);
 
-  const test = await prisma.test.create({
-    data: {
-      candidateId,
-      recruiterId: session.user.id,
-      jobTitle,
-      jobDescription,
-      level,
-      status: "QUESTIONS_PENDING",
-      questions: {
-        create: generated.map((q) => ({
-          order: q.id,
-          questionText: q.questionText,
-          category: q.category,
-          expectedSummary: q.expectedAnswerSummary,
-          maxScore: q.maxScore,
-          codeLanguageHint: q.codeLanguageHint ?? null,
-        })),
+    const test = await prisma.test.create({
+      data: {
+        candidateId,
+        recruiterId: session.user.id,
+        jobTitle,
+        jobDescription,
+        level,
+        status: "QUESTIONS_PENDING",
+        questions: {
+          create: result.questions.map((q) => ({
+            order: q.id,
+            questionText: q.questionText,
+            category: q.category,
+            expectedSummary: q.expectedAnswerSummary,
+            maxScore: q.maxScore,
+            codeLanguageHint: q.codeLanguageHint ?? null,
+          })),
+        },
       },
-    },
-  });
+    });
 
-  return NextResponse.json({ testId: test.id }, { status: 201 });
+    return NextResponse.json({ testId: test.id, debug: result.debug }, { status: 201 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to generate questions";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

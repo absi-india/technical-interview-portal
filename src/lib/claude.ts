@@ -26,12 +26,23 @@ export interface GeneratedQuestion {
   codeLanguageHint: string | null;
 }
 
+export interface AiDebugInfo {
+  systemPrompt: string;
+  userPrompt: string;
+  rawResponse: string;
+}
+
+export interface GenerateQuestionsResult {
+  questions: GeneratedQuestion[];
+  debug: AiDebugInfo;
+}
+
 export async function generateQuestions(
   level: string,
   jobTitle: string,
   jobDescription: string
-): Promise<GeneratedQuestion[]> {
-  const system = `You are a senior technical interviewer. Generate exactly 10 interview questions
+): Promise<GenerateQuestionsResult> {
+  const systemPrompt = `You are a senior technical interviewer. Generate exactly 10 interview questions
 based on the job description and interview level below.
 
 Interview Levels:
@@ -49,13 +60,18 @@ Rules:
 - Vary categories: fundamentals, problem-solving, system design, best practices, past experience
 - Questions must be directly relevant to the JD's technologies and responsibilities`;
 
-  const user = `Interview Level: ${level}
+  const userPrompt = `Interview Level: ${level}
 Job Title: ${jobTitle}
 Job Description: ${jobDescription}`;
 
-  const raw = await callGemini(system, user);
-  const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
-  return JSON.parse(cleaned) as GeneratedQuestion[];
+  const rawResponse = await callGemini(systemPrompt, userPrompt);
+  const cleaned = rawResponse.replace(/```json\n?|\n?```/g, "").trim();
+  const questions = JSON.parse(cleaned) as GeneratedQuestion[];
+
+  return {
+    questions,
+    debug: { systemPrompt, userPrompt, rawResponse },
+  };
 }
 
 export interface RatingResult {
