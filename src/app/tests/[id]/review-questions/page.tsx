@@ -21,6 +21,65 @@ type Test = {
   questions: Question[];
 };
 
+interface AiDebugInfo {
+  systemPrompt: string;
+  userPrompt: string;
+  rawResponse: string;
+}
+
+function AiConversationPanel({ debug, label }: { debug: AiDebugInfo; label?: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border border-purple-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-purple-50 text-sm font-medium text-purple-800 hover:bg-purple-100"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-base">🤖</span>
+          {label ?? "AI Conversation Log"}
+        </span>
+        <span className="text-purple-500 text-xs">{open ? "▲ hide" : "▼ show"}</span>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-gray-100">
+          <div className="p-4 bg-gray-50">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">System Prompt</span>
+              <span className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded">instructions sent to AI</span>
+            </div>
+            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-white border border-gray-200 rounded p-3 max-h-48 overflow-y-auto">
+              {debug.systemPrompt}
+            </pre>
+          </div>
+
+          <div className="p-4 bg-blue-50">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">User Prompt</span>
+              <span className="text-xs px-1.5 py-0.5 bg-blue-200 text-blue-700 rounded">job details</span>
+            </div>
+            <pre className="text-xs text-blue-900 whitespace-pre-wrap font-mono bg-white border border-blue-200 rounded p-3 max-h-48 overflow-y-auto">
+              {debug.userPrompt}
+            </pre>
+          </div>
+
+          <div className="p-4 bg-green-50">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">AI Response</span>
+              <span className="text-xs px-1.5 py-0.5 bg-green-200 text-green-700 rounded">raw output</span>
+            </div>
+            <pre className="text-xs text-green-900 whitespace-pre-wrap font-mono bg-white border border-green-200 rounded p-3 max-h-64 overflow-y-auto">
+              {debug.rawResponse}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReviewQuestionsPage({
   params,
 }: {
@@ -34,6 +93,8 @@ export default function ReviewQuestionsPage({
   const [loading, setLoading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState("");
+  const [debug, setDebug] = useState<AiDebugInfo | null>(null);
+  const [regenDebug, setRegenDebug] = useState<AiDebugInfo | null>(null);
 
   useEffect(() => {
     fetch(`/api/tests/${id}`)
@@ -44,6 +105,14 @@ export default function ReviewQuestionsPage({
         d.test?.questions?.forEach((q: Question) => { initial[q.id] = q.questionText; });
         setEdits(initial);
       });
+
+    // Load AI debug info stored by the generate page
+    try {
+      const stored = sessionStorage.getItem(`ai_debug_${id}`);
+      if (stored) setDebug(JSON.parse(stored));
+    } catch {
+      // sessionStorage not available
+    }
   }, [id]);
 
   async function handleApprove() {
@@ -67,13 +136,19 @@ export default function ReviewQuestionsPage({
     if (!confirm("This will replace all current questions. Continue?")) return;
     setRegenerating(true);
     setError("");
+    setRegenDebug(null);
+
     const res = await fetch(`/api/tests/${id}/regenerate`, { method: "POST" });
     const data = await res.json();
+
     if (!res.ok) {
       setError(data.error ?? "Failed to regenerate");
       setRegenerating(false);
       return;
     }
+
+    if (data.debug) setRegenDebug(data.debug);
+
     // Reload questions
     fetch(`/api/tests/${id}`)
       .then((r) => r.json())
@@ -109,6 +184,14 @@ export default function ReviewQuestionsPage({
           </div>
           <p className="text-sm text-blue-700">Review the AI-generated questions below. You can edit any question before sending the invite. Once approved, the candidate will receive their email invite.</p>
         </div>
+
+        {/* AI conversation panels */}
+        {(debug || regenDebug) && (
+          <div className="mb-6 space-y-3">
+            {debug && <AiConversationPanel debug={debug} label="Original AI Generation" />}
+            {regenDebug && <AiConversationPanel debug={regenDebug} label="Regeneration AI Conversation" />}
+          </div>
+        )}
 
         <div className="space-y-4 mb-8">
           {test.questions.map((q) => {

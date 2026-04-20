@@ -11,15 +11,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = await params;
-  const body = await req.json();
-  const { isActive } = body;
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { isActive } = body;
 
-  const user = await prisma.user.update({
-    where: { id },
-    data: { isActive },
-    select: { id: true, name: true, email: true, role: true, isActive: true },
-  });
+    const user = await prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: { id: true, name: true, email: true, role: true, isActive: true },
+    });
 
-  return NextResponse.json({ user });
+    return NextResponse.json({ user });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update user";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
