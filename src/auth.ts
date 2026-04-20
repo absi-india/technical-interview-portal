@@ -23,7 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (idToken) {
           try {
             const decoded = await firebaseAdmin.verifyIdToken(idToken);
-            const user = await prisma.user.findFirst({
+            let user = await prisma.user.findFirst({
               where: {
                 OR: [
                   { firebaseUid: decoded.uid },
@@ -31,7 +31,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 ],
               },
             });
-            if (!user || !user.isActive) return null;
+
+            if (!user) {
+              // Firebase auth succeeded but no DB record — auto-provision the user.
+              // This handles accounts created before the DB was fully set up.
+              const email = decoded.email;
+              if (!email) return null;
+              user = await prisma.user.create({
+                data: {
+                  firebaseUid: decoded.uid,
+                  email,
+                  name: decoded.name ?? email.split("@")[0],
+                  role: "RECRUITER",
+                  isActive: true,
+                },
+              });
+            }
+
+            if (!user.isActive) return null;
 
             // Sync firebaseUid if not already set
             if (!user.firebaseUid) {
