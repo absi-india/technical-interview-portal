@@ -7,7 +7,7 @@ async function callGemini(system: string, user: string): Promise<string> {
   return pRetry(
     async () => {
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         systemInstruction: system,
       });
       const result = await model.generateContent(user);
