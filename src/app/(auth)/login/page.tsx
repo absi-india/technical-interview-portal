@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,16 +17,36 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    setLoading(false);
-    if (result?.error) {
-      setError("Invalid email or password");
-    } else {
-      router.push("/dashboard");
+
+    try {
+      // Sign in with Firebase to get an ID token
+      const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+      const idToken = await credential.user.getIdToken();
+
+      // Exchange the Firebase token for a Next-Auth session
+      const result = await signIn("credentials", { idToken, redirect: false });
+      if (result?.error) {
+        setError("Account not found or inactive. Contact your administrator.");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") {
+        setError("Invalid email or password");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Please try again later.");
+      } else {
+        // Firebase not configured — fall back to legacy bcrypt login
+        const result = await signIn("credentials", { email, password, redirect: false });
+        if (result?.error) {
+          setError("Invalid email or password");
+        } else {
+          router.push("/dashboard");
+        }
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -63,6 +86,12 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-blue-600 hover:underline font-medium">
+            Create account
+          </Link>
+        </p>
       </div>
     </div>
   );
