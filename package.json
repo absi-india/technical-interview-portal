@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
+    "db:migrate": "npx tsx --env-file=.env scripts/migrate-turso.ts",
+    "db:seed": "npx tsx --env-file=.env prisma/seed.ts",
     "start": "next start",
     "lint": "eslint"
   },

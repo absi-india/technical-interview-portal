@@ -4,8 +4,8 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 const url = process.env.DATABASE_URL ?? "file:./dev.db";
-const libsqlUrl = url.startsWith("file:") ? url : `file:${url}`;
-const adapter = new PrismaLibSql({ url: libsqlUrl });
+const authToken = process.env.DATABASE_AUTH_TOKEN;
+const adapter = new PrismaLibSql({ url, authToken });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const prisma = new PrismaClient({ adapter } as any);
 
